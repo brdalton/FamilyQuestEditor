@@ -248,11 +248,19 @@ function resetCropper() {
   draw();
 }
 
+export function capturePreviewAsBlob() {
+  return new Promise(resolve => {
+    previewCanvas.toBlob(blob => {
+      resolve(blob);
+    }, "image/jpeg", 0.9);
+  });
+}
+
 export function saveCroppedPhoto() {
-  if (!currentMember) {
+  /* if (!currentMember) {
     alert("Save a member first.");
     return;
-  }
+  } */
   console.log("saveCroppedPhoto() WAS CALLED");
 
   const cropCanvas = document.createElement("canvas");
