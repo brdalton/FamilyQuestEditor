@@ -6,7 +6,7 @@ import {
   createDefaultJson
 } from '../storage/storage.js';
 import { supabase } from '../shared/supabaseClient.js';
-import { clearCropper } from './cropper.js';
+import { clearCropper, capturePreviewAsBlob } from './cropper.js';
 
 export let jsonData = { family: [] };
 export let currentMember = null;
@@ -407,7 +407,7 @@ export async function saveCurrentAnecdote() {
   updateAnecdoteLabels();
   alert("Anecdote saved!");
 
-  // 6. Upload photo if present
+  /*/ 6. Upload photo if present
   if (currentMember.photoBlob  && currentMember.photoChanged) {  //added the bit about photoChanged 4/3/2006
     console.log("PHOTO BLOB AT SAVE TIME:", currentMember.photoBlob);
     console.log("Uploading to:", `photos/${currentMember.id}.jpg`);
@@ -424,8 +424,29 @@ export async function saveCurrentAnecdote() {
 
     await uploadPhotoForMember(currentMember);
     currentMember.photoChanged = false;
-  }
+  }*/
+  // 6. Always capture the preview image on Save
+  const blob = await capturePreviewAsBlob();
 
+  // If the preview is blank (no photo loaded), skip upload
+  if (blob && blob.size > 0) {
+    currentMember.photoBlob = blob;
+    currentMember.photoChanged = true;
+  }
+  
+  // Upload only if changed
+  if (currentMember.photoChanged) {
+    await supabase.auth.refreshSession();
+    const { data: { user } } = await supabase.auth.getUser();
+  
+    if (!user) {
+      console.error("No authenticated user — cannot upload");
+      return;
+    }
+  
+    await uploadPhotoForMember(currentMember);
+    currentMember.photoChanged = false;
+  }
   // 7. Save JSON
   delete currentMember.photoBlob;
   await saveJsonToSupabase(jsonData);
