@@ -32,6 +32,7 @@ export function loadPhotoIntoCache(member) {
 
     return new Promise(resolve => {
       const img = new Image();
+	  img.crossOrigin = "anonymous";  //might fix a problem
       img.onload = () => {
         editorImageCache[member.photo] = img;
         resolve();
