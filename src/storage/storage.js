@@ -116,4 +116,20 @@ export async function uploadPhotoForMember(member) {
 
   console.log("Supabase returned filename:", filename);
   console.log("Assigned to member:", member.photo);
+
+  // 7. Refresh editor cache and preview
+  const { data } = supabase.storage
+    .from('images')
+    .getPublicUrl(`${user.id}/${filename}?cacheBust=${Date.now()}`);
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    editorImageCache[filename] = img;
+    showCachedPhoto(member);   // redraw preview with the new image
+  };
+  img.onerror = () => {
+    console.warn("Failed to refresh cached image for member:", member.name);
+  };
+  img.src = data.publicUrl;
 }
