@@ -183,6 +183,9 @@ export function nameSelected() {
 /* ANECDOTES */
 
 export function showCachedPhoto(member) {
+  // Only draw cached photo when selecting a member
+  if (!member || !member.photo) return;
+
   const img = editorImageCache[member.photo];
   if (!img) return;
 
