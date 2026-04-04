@@ -77,6 +77,9 @@ function onDrop(e) {
 function loadImageFile(file) {
   console.log("loadImageFile fired");
 
+  if (currentMember) {
+    currentMember.photoChanged = true;
+  }
   const url = URL.createObjectURL(file);
 
   img = new Image();
@@ -84,7 +87,9 @@ function loadImageFile(file) {
     URL.revokeObjectURL(url);
 
     currentImage = img;
-
+    // Clear preview so old cached image doesn't remain underneath
+    pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    
     resetCropper();
     overlay.style.display = "none";
     fitImageToCropBox();
