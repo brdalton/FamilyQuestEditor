@@ -106,12 +106,29 @@ export async function saveJson() {
 }
 
 /* NAMES */
-
+/*
 export function populateNameList() {
   const list = $("comboList");
   list.innerHTML = "";
 
   jsonData.family.forEach(member => {
+    const li = document.createElement("li");
+    li.textContent = member.name;
+    li.onclick = () => selectComboItem(member.name);
+    list.appendChild(li);
+  });
+} */
+
+export function populateNameList() {
+  const list = $("comboList");
+  list.innerHTML = "";
+
+  // Alphabetize by member.name
+  const sorted = [...jsonData.family].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  sorted.forEach(member => {
     const li = document.createElement("li");
     li.textContent = member.name;
     li.onclick = () => selectComboItem(member.name);
