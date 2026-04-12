@@ -1,4 +1,4 @@
-import { currentMember } from './editor.js';
+import { currentMember, markDirty } from './editor.js';
 
 let currentImage = null;
 
@@ -85,13 +85,15 @@ function loadImageFile(file) {
 
     currentImage = img;
 
-	// Clear old cached preview
-	pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    // Clear old cached preview
+    pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
 
     resetCropper();
     overlay.style.display = "none";
     fitImageToCropBox();
     draw();
+    //updatePreview(); // ***************** added this here to fix a problem. moved from draw()
+    markDirty();
   };
 
   img.src = url;
@@ -202,7 +204,9 @@ function draw() {
 
   ctx.restore();
 
-  updatePreview();
+  if (currentImage) {
+    updatePreview();
+  }   
 }
 
 function updatePreview() {
@@ -210,7 +214,7 @@ function updatePreview() {
 
   pctx.drawImage(
     canvas,
-    CROP_X, CROP_Y, CROP_SIZE, CROP_SIZE,
+    CROP_X + 1, CROP_Y + 1, CROP_SIZE - 2, CROP_SIZE - 2,  //the +1 and -2 are to get rid of the blue line
     0, 0, 200, 200
   );
 

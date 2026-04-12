@@ -29,17 +29,23 @@
         <div class="combo-wrapper">
           <label for="nameInput">Name:</label>
 
-          <div class="combo-box">
-            <input id="nameInput" type="text" autocomplete="off">
-            <button id="comboArrowButton" class="combo-arrow">▼</button>
-          </div>
+          <div class="combo-row">
+            <div class="combo-box">
+              <input id="nameInput" type="text" autocomplete="off">
+              <button id="comboArrowButton" class="combo-arrow">▼</button>
+              <ul id="comboList" class="combo-list hidden"></ul> 
+            </div>
 
-          <ul id="comboList" class="combo-list hidden"></ul>
-        </div>
+            <button id="renameBtn" title="Edit Name" "class="rename-btn">✎</button>
+          </div>
+          <!-- <ul id="comboList" class="combo-list hidden"></ul>  -->
+          
+        </div>  
         <div class="photo-cropped">
           <canvas id="previewCanvas" width="200" height="200"></canvas>
           <div class="preview-label">Final 200×200 Preview</div>
         </div>
+
       </div>
 
       <!-- RIGHT COLUMN: photo-big -->
@@ -79,16 +85,16 @@
 
     <div class="two-column">
       <div style="flex:1">
-        <div class="field-label"><span>Story:</span></div>
-        <textarea id="storyBox"></textarea>
-      </div>
-      <div style="flex:1">
         <div class="field-label"><span>Question:</span></div>
         <textarea id="questionBox"></textarea>
       </div>
+      <div style="flex:1">
+        <div class="field-label"><span>Story:</span></div>
+        <textarea id="storyBox"></textarea>
+      </div>
     </div>
 
-    <div class="answers-section">
+    <div class="answers-section" id="answersSection">
       <div class="field-label"><span>Answers:</span></div>
 
       <div class="answer-row">
@@ -114,7 +120,7 @@
 
     <div class="buttons-row">
       <div>
-        <button id="saveAnecdoteBtn" class="btn-primary">Save</button>
+        <button id="saveAnecdoteBtn" class="btn-ghost">Save</button>
         <button id="addAnecdoteBtn" class="btn-ghost">Add New Anecdote</button>
       </div>
       <button id="deleteAnecdoteBtn" class="btn-danger">Delete Anecdote</button>
@@ -122,6 +128,17 @@
     </div>
   </div>
 
+</div>
+
+<div id="renameModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <label for="renameInput">Edit name:</label>
+    <input id="renameInput" type="text">
+    <div class="modal-buttons">
+      <button id="renameOkBtn">OK</button>
+      <button id="renameCancelBtn">Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="./src/main.js"></script>

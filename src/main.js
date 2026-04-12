@@ -11,16 +11,20 @@ import {
   deleteCurrentAnecdote,
   prevAnecdote,
   nextAnecdote,
-  markDirty
+  markDirty,
+  openRenameModal,
+  commitRename,
+  closeRenameModal
 } from './editor/editor.js';
 
 import { initCropper, saveCroppedPhoto } from './editor/cropper.js';
 import { initAuthUI, login, logout } from './shared/supabaseClient.js';
 
-// INIT
-initCropper();
-initEditor();
-initAuthUI();
+window.addEventListener("DOMContentLoaded", () => {
+  initCropper();
+  initEditor();
+  initAuthUI();
+});
 
 // PHOTO
 document.getElementById("savePhotoBtn")
@@ -55,6 +59,22 @@ document.getElementById("nameInput")
 document.getElementById("comboArrowButton")
   .addEventListener("click", toggleComboList);
 
+document.addEventListener("click", (e) => {
+  const list = document.getElementById("comboList");
+  const box = document.querySelector(".combo-box");
+  const arrow = document.getElementById("comboArrowButton");
+
+  // If list is closed, do nothing
+  if (list.classList.contains("hidden")) return;
+
+  // If click is inside the combo box or arrow, do nothing
+  if (box.contains(e.target) || arrow.contains(e.target)) return;
+
+  // Otherwise close the list
+  list.classList.add("hidden");
+});
+
+
 // ANECDOTE NAV
 document.getElementById("prevAnecdoteBtn")
   .addEventListener("click", prevAnecdote);
@@ -88,3 +108,13 @@ document.getElementById("ans3").addEventListener("input", markDirty);
 document.querySelectorAll('input[name="correct"]').forEach(radio => {
   radio.addEventListener("click", markDirty);
 });
+
+// RENAME MODAL
+document.getElementById("renameBtn")
+  .addEventListener("click", openRenameModal);
+
+document.getElementById("renameOkBtn")
+  .addEventListener("click", commitRename);
+
+document.getElementById("renameCancelBtn")
+  .addEventListener("click", closeRenameModal);

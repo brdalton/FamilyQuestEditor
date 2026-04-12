@@ -117,7 +117,7 @@ export function populateNameList() {
     li.onclick = () => selectComboItem(member.name);
     list.appendChild(li);
   });
-} */
+}*/
 
 export function populateNameList() {
   const list = $("comboList");
@@ -141,6 +141,18 @@ export function toggleComboList() {
 }
 
 function selectComboItem(name) {
+  if (currentMember) {
+    const saveName = currentMember.name;
+    if (name != saveName) {
+      if (isDirty()) {
+        //$("nameInput").value = saveName;
+        $("comboList").classList.add("hidden");
+
+        alert("You have unsaved changes.")
+        return;
+      }
+    }
+  }  
   $("nameInput").value = name;
   $("comboList").classList.add("hidden");
   nameSelected();
@@ -158,7 +170,7 @@ export function onComboInput() {
 
   $("comboList").classList.remove("hidden");
 
-  nameSelected();
+  //nameSelected();
 }
 
 export function nameSelected() {
@@ -172,18 +184,21 @@ export function nameSelected() {
   if (currentMember) {
     currentAnecdoteIndex = 0;
     loadAnecdote();
-    /*
-    downloadPhotoForMember(currentMember).then(() => {
-      // If the image is already cached, show it immediately
-      if (editorImageCache[currentMember.photo]) {
-        showCachedPhoto(currentMember);
-      } else {
-        // Otherwise load it, then show it when ready
-        loadPhotoIntoCache(currentMember);
-        // Optional: show it automatically when loaded
-        // (the loadPhotoIntoCache() onload handler can call showCachedPhoto)
-      }
-    }); */
+
+    // ⭐ Hide answers when selecting a wildcard or follies person
+    const answersSection = document.getElementById("answersSection");
+
+    const isWildcard = currentMember.name.toLowerCase().startsWith("wildcard");
+    //const isFollies = currentMember.id === "follies";
+    const isFollies = currentMember.name.toLowerCase() === "follies";
+
+    if (isWildcard || isFollies) {
+      answersSection.style.display = "none";
+    } else {
+      answersSection.style.display = "block";
+    }   
+    // end of hide answers
+
     if (editorImageCache[currentMember.photo]) {
       showCachedPhoto(currentMember);
     } else {
@@ -258,6 +273,19 @@ function loadAnecdote() {
   if (radio) radio.checked = true;
 
   updateAnecdoteLabels();
+
+  // ⭐ HIDE ANSWERS FOR WILDCARDS & FOLLIES
+  const answersSection = document.getElementById("answersSection");
+
+  const isWildcard = currentMember.name.toLowerCase().startsWith("wildcard");
+  const isFollies = currentMember.name.toLowerCase() === "follies";
+
+  if (isWildcard || isFollies) {
+    answersSection.style.display = "none";
+  } else {
+    answersSection.style.display = "block";
+  }
+
 }
 
 function updateAnecdoteLabels() {
@@ -301,6 +329,10 @@ export function markDirty() {
 
 export function clearDirty() {
   $("saveAnecdoteBtn").classList.remove("save-dirty");
+}
+
+export function isDirty() {
+  return $("saveAnecdoteBtn").classList.contains("save-dirty");
 }
 
 /* SAVE / ADD / DELETE */
@@ -403,9 +435,26 @@ export async function saveCurrentAnecdote() {
   ];
   const correct = parseInt(document.querySelector("input[name='correct']:checked").value, 10);
 
+  /* 
   if (!story || !question || answers.some(a => a === "")) {
     alert("All text fields (story, question, and all answers) must be filled out.");
     return;
+  }*/
+  const isWildcard = currentMember.name.toLowerCase().startsWith("wildcard");
+  const isFollies = currentMember.name.toLowerCase() === "follies";
+
+  // Always require story + question
+  if (!story || !question) {
+    alert("Story and question must be filled out.");
+    return;
+  }
+
+  // Only require answers for normal people
+  if (!isWildcard && !isFollies) {
+    if (answers.some(a => a === "")) {
+      alert("All four answers must be filled in.");
+      return;
+    }
   }
 
   if (!currentMember.anecdotes) currentMember.anecdotes = [];
@@ -422,7 +471,7 @@ export async function saveCurrentAnecdote() {
     answers,
     correct
   };
-
+  clearCropper();
   clearDirty();
   updateAnecdoteLabels();
   alert("Anecdote saved!");
@@ -449,13 +498,16 @@ export async function saveCurrentAnecdote() {
     await uploadPhotoForMember(currentMember);
     currentMember.photoChanged = false;
   }
-
+  
   // 7. Save JSON
   delete currentMember.photoBlob;
   await saveJsonToSupabase(jsonData);
 }
 
 export function addNewAnecdote() {
+  if (isDirty()) {
+    saveCurrentAnecdote();
+  }
   if (!currentMember) {
     const name = $("nameInput").value.trim();
     if (!name) {
@@ -519,3 +571,68 @@ export function nextAnecdote() {
     loadAnecdote();
   }
 }
+
+export function openRenameModal() {
+  if (!currentMember) return;
+
+  const modal = $("renameModal");
+  const input = $("renameInput");
+
+  input.value = currentMember.name;
+  modal.style.display = "block";
+
+  input.focus();
+  input.select();
+
+  // Add key listener
+  document.addEventListener("keydown", handleRenameKeys);
+}
+
+export function closeRenameModal() {
+  $("renameModal").style.display = "none";
+
+  // Remove key listener
+  document.removeEventListener("keydown", handleRenameKeys);
+}
+
+function handleRenameKeys(e) {
+  if (e.key === "Enter") {
+    commitRename();
+  } else if (e.key === "Escape") {
+    closeRenameModal();
+  }
+}
+
+export function commitRename() {
+  const newName = $("renameInput").value.trim();
+  const oldName = currentMember.name;
+
+  if (!newName || newName === oldName) {
+    closeRenameModal();
+    return;
+  }
+
+  // 1. Update JSON
+  currentMember.name = newName;
+
+  // 2. Update photo filename if needed
+  if (currentMember.photo && currentMember.photo.startsWith(oldName)) {
+    const ext = currentMember.photo.split(".").pop();
+    currentMember.photo = `${newName}.${ext}`;
+  }
+
+  // 3. Update the visible combo box input
+  $("nameInput").value = newName;
+
+  // 4. Refresh the dropdown list
+  populateNameList();
+
+  // 5. Mark JSON as dirty so Save JSON File will persist it
+  markDirty();
+  saveCurrentAnecdote();
+  // 6. Close the modal
+  closeRenameModal();
+}
+
+
+

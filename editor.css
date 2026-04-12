@@ -99,7 +99,7 @@ label {
 }
 
 #nameInput {
-  width: 260px;
+  /* width: 250px; */
   padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid var(--border);
@@ -113,22 +113,41 @@ label {
 }
 
 .combo-wrapper {
-  position: relative;
-  width: 250px;
+  width: 275px;
+  /* position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px; */
+}
+
+/* Label spacing */
+.combo-wrapper label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.combo-row {
+  display: flex;
+  /*align-items: center;*/
+  gap: 6px;
 }
 
 .combo-box {
+  position: relative; 
+  flex: 1;
   display: flex;
-  border: 1px solid #aaa;
+  /*border: 0px solid #aaa;
   border-radius: 4px;
   overflow: hidden;
+  background: white;*/
 }
 
 .combo-box input {
   flex: 1;
-  border: none;
+  box-sizing: border-box;
+  /*border: none;
   padding: 6px;
-  font-size: 14px;
+  font-size: 14px;*/
 }
 
 .combo-box input:focus {
@@ -136,11 +155,29 @@ label {
 }
 
 .combo-arrow {
-  width: 32px;
-  border: none;
+  width: 40px;
+  border: 1px solid var(--border);
   background: #eee;
   cursor: pointer;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center; /* centers the ▼ perfectly */
+  padding: 0; /* remove browser padding */
+}
+
+#renameBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 24px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  /*margin-left: 0px;
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  font-size: 24px;*/
 }
 
 .combo-list {
@@ -148,7 +185,8 @@ label {
   top: 100%;
   left: 0;
   right: 0;
-  max-height: 200px;
+  width: 100%;
+  max-height: 250px;
   overflow-y: auto;
   border: 1px solid #aaa;
   background: white;
@@ -353,4 +391,68 @@ textarea:focus {
   display: flex;
   justify-content: space-between;
   margin-top: 16px;
+}
+
+/* --- Modal Backdrop --- */
+#renameModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25); /* soft dim */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+/* --- Dialog Box --- */
+#renameModal .modal-content {
+  background: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 260px;
+  max-width: 300px;
+  font-family: system-ui, sans-serif;
+}
+
+/* --- Input --- */
+#renameModal input {
+  width: 100%;
+  padding: 6px 8px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* --- Buttons --- */
+
+#renameModal .modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#renameModal button {
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #bbb;
+  background: #f3f3f3;
+}
+
+#renameModal button:hover {
+  background: #e7e7e7;
+}
+
+#renameOkBtn {
+  background: #2b6cb0;
+  color: white;
+  border-color: #2b6cb0;
+}
+
+#renameOkBtn:hover {
+  background: #245a94;
 }
