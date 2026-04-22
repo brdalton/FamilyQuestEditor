@@ -1,8 +1,11 @@
 import {
+  $,
   initEditor,
   createNewJson,
   saveJson,
   onComboInput,
+  onComboInputBlur,
+  onNameInputKey,
   toggleComboList,
   nameSelected,
   deleteCurrentPerson,
@@ -13,56 +16,101 @@ import {
   nextAnecdote,
   markDirty,
   openRenameModal,
-  commitRename,
-  closeRenameModal
+  startNewMemberMode
 } from './editor/editor.js';
 
 import { initCropper, saveCroppedPhoto } from './editor/cropper.js';
-import { initAuthUI, login, logout } from './shared/supabaseClient.js';
+import { initAuthUI, login, logout, supabase } from './shared/supabaseClient.js';
 
+// ⭐ NEW — MAIN ENTRY POINT
 window.addEventListener("DOMContentLoaded", () => {
-  initCropper();
-  initEditor();
-  initAuthUI();
+  initApp();
 });
 
+// ⭐ NEW — LOGIN‑AWARE STARTUP
+async function initApp() {
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    showLoggedOutScreen();
+    return;
+  }
+
+  // Logged in → show editor UI
+  document.getElementById("editorApp").style.display = "block";
+
+  // Your original startup sequence
+  initAuthUI();
+  initEditor();
+  initCropper();
+}
+
+// ⭐ NEW — LOGGED‑OUT SCREEN
+function showLoggedOutScreen() {
+  document.body.innerHTML = `
+    <div id="loggedOutScreen" class="logged-out-container">
+      <h1>Family Editor</h1>
+      <p>You must be logged in to view or edit your family data.</p>
+      <button id="loginButton">Log In</button>
+    </div>
+  `;
+
+  document.getElementById("loginButton").addEventListener("click", async () => {
+    const email = prompt("Enter your email address:");
+    if (!email) return;
+
+    const { error } = await supabase.auth.signInWithOtp({ email });
+    if (error) {
+      alert("Error sending magic link: " + error.message);
+    } else {
+      alert("Magic link sent! Check your email.");
+    }
+  });
+}
+
 // PHOTO
-document.getElementById("savePhotoBtn")
+$("savePhotoBtn")
   .addEventListener("click", async () => {
     await saveCroppedPhoto();
   });
 
 // JSON BUTTONS
-document.getElementById("openJsonButton")
+$("openJsonButton")
   .addEventListener("click", async () => {
     await initEditor();
   });
 
-document.getElementById("createJsonButton")
+$("createJsonButton")
   .addEventListener("click", async () => {
     await createNewJson();
   });
 
-document.getElementById("saveJsonButton")
+$("saveJsonButton")
   .addEventListener("click", async () => {
     await saveJson();
   });
 
 // AUTH BUTTONS
-document.getElementById("loginButton").addEventListener("click", login);
-document.getElementById("logoutButton").addEventListener("click", logout);
+$("loginButton").addEventListener("click", login);
+$("logoutButton").addEventListener("click", logout);
 
 // NAME / COMBO
-document.getElementById("nameInput")
+$("nameInput")
   .addEventListener("input", onComboInput);
 
-document.getElementById("comboArrowButton")
+$("nameInput")
+  .addEventListener("blur", onComboInputBlur);
+
+$("nameInput").addEventListener("keydown", onNameInputKey);
+
+
+$("comboArrowButton")
   .addEventListener("click", toggleComboList);
 
-document.addEventListener("click", (e) => {
-  const list = document.getElementById("comboList");
+document.addEventListener("click", (e) => {  //close the list if we clicked outside it
+  const list = $("comboList");
   const box = document.querySelector(".combo-box");
-  const arrow = document.getElementById("comboArrowButton");
+  const arrow = $("comboArrowButton");
 
   // If list is closed, do nothing
   if (list.classList.contains("hidden")) return;
@@ -74,47 +122,48 @@ document.addEventListener("click", (e) => {
   list.classList.add("hidden");
 });
 
+$("renameBtn")  
+  .addEventListener("click", openRenameModal);
+
+$("newNameBtn")  
+  .addEventListener("click", startNewMemberMode);
+
+/*$("newNameBtn")  
+  .addEventListener("click", () => startNewMemberMode("New"));  */
 
 // ANECDOTE NAV
-document.getElementById("prevAnecdoteBtn")
+$("prevAnecdoteBtn")
   .addEventListener("click", prevAnecdote);
 
-document.getElementById("nextAnecdoteBtn")
+$("nextAnecdoteBtn")
   .addEventListener("click", nextAnecdote);
 
 // ANECDOTE SAVE / ADD / DELETE
-document.getElementById("saveAnecdoteBtn")
+$("saveAnecdoteBtn")
   .addEventListener("click", async () => {
     await saveCurrentAnecdote();
   });
 
-document.getElementById("addAnecdoteBtn")
+$("addAnecdoteBtn")
   .addEventListener("click", addNewAnecdote);
 
-document.getElementById("deleteAnecdoteBtn")
+$("deleteAnecdoteBtn")
   .addEventListener("click", deleteCurrentAnecdote);
 
-document.getElementById("deletePersonBtn")
+$("deletePersonBtn")
   .addEventListener("click", deleteCurrentPerson);
 
 // DIRTY MARKING
-document.getElementById("storyBox").addEventListener("input", markDirty);
-document.getElementById("questionBox").addEventListener("input", markDirty);
-document.getElementById("ans0").addEventListener("input", markDirty);
-document.getElementById("ans1").addEventListener("input", markDirty);
-document.getElementById("ans2").addEventListener("input", markDirty);
-document.getElementById("ans3").addEventListener("input", markDirty);
+//$("nameInput").addEventListener("input", markDirty);
+$("storyBox").addEventListener("input", markDirty);
+$("questionBox").addEventListener("input", markDirty);
+$("ans0").addEventListener("input", markDirty);
+$("ans1").addEventListener("input", markDirty);
+$("ans2").addEventListener("input", markDirty);
+$("ans3").addEventListener("input", markDirty);
 
 document.querySelectorAll('input[name="correct"]').forEach(radio => {
   radio.addEventListener("click", markDirty);
 });
 
-// RENAME MODAL
-document.getElementById("renameBtn")
-  .addEventListener("click", openRenameModal);
 
-document.getElementById("renameOkBtn")
-  .addEventListener("click", commitRename);
-
-document.getElementById("renameCancelBtn")
-  .addEventListener("click", closeRenameModal);
