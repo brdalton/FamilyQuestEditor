@@ -1,0 +1,123 @@
+/* --- Modal Backdrop --- */
+.modal {
+  display: none; /* shown via JS */
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25); /* soft, friendly dim */
+  backdrop-filter: blur(2px);      /* gentle polish */
+  z-index: 1000;
+
+  /* Center the dialog */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* --- Modal Box --- */
+.modal-content {
+  background: var(--bg);
+  padding: 20px 24px;
+  border-radius: 10px;
+  width: 320px;
+  max-width: 90vw;
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--border);
+
+  animation: popIn 0.15s ease-out;
+}
+
+/* Friendly little pop animation */
+@keyframes popIn {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* --- Title --- */
+#modalTitle {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* --- Message --- */
+#modalMessage {
+  margin: 0 0 14px 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* --- Input Field --- */
+#modalInput {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  background: white;
+}
+
+/* --- Buttons Row (new dynamic buttons container) --- */
+#modalButtons {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;              /* spacing between buttons */
+  /* margin-top: 10px; */
+}
+
+/* --- Base Button Style --- */
+#modalButtons button {
+  padding: 7px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--accent-light);
+  transition: background 0.15s, transform 0.1s;
+  /*outline: none;          /* remove blue focus frame */
+}
+
+/* Hover */
+#modalButtons button:hover {
+  background: var(--accent);
+  color: white;
+}
+
+/* Active press */
+#modalButtons button:active {
+  transform: scale(0.96);
+}
+
+/* --- Primary Button (OK, Save, Replace, etc.) --- */
+#modalButtons button.primary {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+#modalButtons button.primary:hover {
+  background: #1f4f80; /* slightly darker accent */
+}
+
+/* --- Optional: Danger Button (Delete, Remove, etc.) --- */
+#modalButtons button.danger {
+  background: #c62828;
+  color: white;
+  border-color: #c62828;
+}
+
+#modalButtons button.danger:hover {
+  background: #a61f1f;
+}

@@ -1,25 +1,38 @@
 import {
   uploadPhotoForMember,
-  //downloadPhotoForMember,
   loadJsonFromSupabase,
   saveJsonToSupabase,
   createDefaultJson
 } from '../storage/storage.js';
 import { supabase } from '../shared/supabaseClient.js';
 import { clearCropper, capturePreviewAsBlob } from './cropper.js';
+import { showModal } from "./modal.js";
 
 export let jsonData = { family: [] };
 export let currentMember = null;
 export let currentAnecdoteIndex = 0;
 export const editorImageCache = {};
+let newMemberMode = false;
+let newMemberName = "new";
+let previewHasImage = false;
+let isEmpty = false;  //true if question, story, or any answer is empty
 
 /* Utility */
-function $(id) {
+
+/*********************************************************************
+ * function $(id)
+ * shortcut used all over the place
+ *********************************************************************/
+export function $(id) {
   return document.getElementById(id);
 }
 
 /* INIT */
 
+/*********************************************************************
+ * loadPhotoIntoCache
+ * This is called from preloadEditorImages, nameSelected
+ *********************************************************************/
 export function loadPhotoIntoCache(member) {
   if (!member.photo) return Promise.resolve();
 
@@ -46,11 +59,19 @@ export function loadPhotoIntoCache(member) {
   });
 }
 
+/*********************************************************************
+ * preloadEditorImages
+ * Called from initEditor
+ *********************************************************************/
 export async function preloadEditorImages(family) {
   const tasks = family.map(member => loadPhotoIntoCache(member));
   await Promise.all(tasks);
 }
 
+/*********************************************************************
+ * initEditor
+ * Called on DOMContentLoaded from main.js
+ *********************************************************************/
 export async function initEditor() {
   showSpinner();
   console.log("Loading JSON from Supabase…");
@@ -78,14 +99,26 @@ export async function initEditor() {
   hideSpinner();
 }
 
+/*********************************************************************
+ * showSpinner
+ * Called from initEditor
+ *********************************************************************/
 function showSpinner() {
   document.getElementById("loadingSpinner").classList.remove("hidden");
 }
 
+/*********************************************************************
+ * hideSpinner
+ * Called from initEditor
+ *********************************************************************/
 function hideSpinner() {
   document.getElementById("loadingSpinner").classList.add("hidden");
 }
 
+/*********************************************************************
+ * createNewJson
+ * Called on button click
+ *********************************************************************/
 export async function createNewJson() {
   if (!confirm("Create a new JSON for this user? This will overwrite the existing one in Supabase.")) {
     return;
@@ -100,25 +133,22 @@ export async function createNewJson() {
   alert("New JSON created and saved to Supabase.");
 }
 
+/***********************************************************************
+ * saveJson
+ * Called from button click 
+ ***********************************************************************/
 export async function saveJson() {
   await saveJsonToSupabase(jsonData);
   alert("JSON saved to Supabase.");
 }
 
 /* NAMES */
-/*
-export function populateNameList() {
-  const list = $("comboList");
-  list.innerHTML = "";
 
-  jsonData.family.forEach(member => {
-    const li = document.createElement("li");
-    li.textContent = member.name;
-    li.onclick = () => selectComboItem(member.name);
-    list.appendChild(li);
-  });
-}*/
-
+/***********************************************************************
+ * populateNameList
+ * This is called from initEditor, deleteCurrentPerson, 
+ * saveCurrentAnecdote, addNewAnecdote, and commitRename
+ ***********************************************************************/
 export function populateNameList() {
   const list = $("comboList");
   list.innerHTML = "";
@@ -127,7 +157,7 @@ export function populateNameList() {
   const sorted = [...jsonData.family].sort((a, b) =>
     a.name.localeCompare(b.name)
   );
-
+  //alert("I just sorted the list in populateNameList");
   sorted.forEach(member => {
     const li = document.createElement("li");
     li.textContent = member.name;
@@ -136,43 +166,164 @@ export function populateNameList() {
   });
 }
 
-export function toggleComboList() {
-  $("comboList").classList.toggle("hidden");
+/***********************************************************
+ * toggleComboList
+ * Called from selectComboItem and onComboInput 
+ ***********************************************************/
+export async function toggleComboList() {
+  //if (newMemberMode) return; // disable in new member mode
+  /*if (!(await guardAgainstUnsavedChanges())) {
+    $("comboList").classList.add("hidden");
+    return;
+  }*/
+  const items = $("comboList").querySelectorAll("li");
+  items.forEach(li => li.style.display = "block"); // full list always
+  $("comboList").classList.toggle("hidden");  
+
 }
 
-function selectComboItem(name) {
-  if (currentMember) {
-    const saveName = currentMember.name;
-    if (name != saveName) {
-      if (isDirty()) {
-        //$("nameInput").value = saveName;
-        $("comboList").classList.add("hidden");
+/***********************************************************
+ * 
+ * Guard against illegal saves or switches. Each field must
+ * be filled, and we don't want to lose unsaved changes 
+ * without giving a choice. 
+ ***********************************************************/
 
-        alert("You have unsaved changes.")
-        return;
-      }
+/***********************************************************
+ * guardAgainstUnsavedChanges
+ * Called from selectComboItem and onComboInput 
+ ***********************************************************/
+async function guardAgainstUnsavedChanges() {
+  const hold = $("nameInput").value;
+  //alert(`hold is ${hold}`);
+  if (isDirty()) {
+    //$("nameInput").value = newMemberMode ? newMemberName : currentMember.name;
+    if (currentMember) $("nameInput").value = currentMember.name;
+    else $("nameInput").value = newMemberName;
+    //newMemberMode = false;
+    //alert(`currentMember is ${currentMember.name}, hold is ${hold}`);
+
+    const result = await showModal({
+      title: "This person is not yet finished.",
+      message: "If you exit now, your changes will be lost.",
+      buttons: [
+        { label: "Go Back", value: "back", class: "primary" },
+        { label: "Exit", value: "exit" }
+      ]
+    });
+
+    if (result.button === "back") {
+      return "block";
     }
-  }  
+
+    // User chose EXIT
+    $("nameInput").value = hold;
+    clearDirty();
+    return "exit";
+  }
+
+  // No unsaved changes
+  return "clean";
+}
+
+
+/***********************************************************
+ * selectComboItem
+ * This runs from populateNameList if I click on a name    *
+ ***********************************************************/
+async function selectComboItem(name) {
+  // 1. Guard against unsaved changes
+  const guard = await guardAgainstUnsavedChanges();
+  if (guard == "block") {
+    $("comboList").classList.add("hidden");
+    return;
+  }
+  // 2. Safe to switch
   $("nameInput").value = name;
   $("comboList").classList.add("hidden");
   nameSelected();
 }
 
-export function onComboInput() {
-  const filter = $("nameInput").value.toLowerCase();
+/********************************************************************
+ * onComboInput
+ * Called only from the event listener from main.js
+ * This runs any time I type in the combo box
+ ********************************************************************/
+export async function onComboInput() {
+  if (!newMemberMode) {  //Skip all this if I'm in newMemberMode
+    const guard = await guardAgainstUnsavedChanges();
+
+    if (guard === "block") {  // Keep editing the person we were editing
+      $("comboList").classList.add("hidden");
+      return;
+    }
+
+    if (guard === "exit") {  // User wants to forget about changes
+      $("nameInput").value = "";
+      $("nameInput").focus();
+
+      // Re-open and re-filter the list
+      const input = $("nameInput").value.toLowerCase();
+      const items = $("comboList").querySelectorAll("li");
+
+      items.forEach(li => {
+        li.style.display = li.textContent.toLowerCase().startsWith(input)
+          ? "block"
+          : "none";
+      });
+    }
+  }
+
+  // --- Normal clean path continues here ---
+  const input = $("nameInput").value;
+  newMemberName = input;
+/**************************************************************************************
+ * in fact, maybe in newMemberMode we get rid of Add New Anecdote, 
+ * Delete Anecdote, and Delete Person.
+ **************************************************************************************/
+  if (!newMemberMode) {  //Skip all this if I'm already in newMemberMode
+    if (!currentMember || (currentMember && input !== currentMember.name)) { 
+      currentMember = null;
+      clearAnecdoteFields();
+      updateAnecdoteLabels();
+      clearCropper();
+      clearPreviewDisplay();
+      setDefaultPreview();
+      newMemberMode = true;
+      $("renameBtn").disabled = true;
+      $("newNameBtn").disabled = true;
+      $("deletePersonBtn").disabled = true;
+    }
+  }
+
   const items = $("comboList").querySelectorAll("li");
+  const filter = input.toLowerCase();
 
   items.forEach(li => {
-    li.style.display = li.textContent.toLowerCase().includes(filter)
+    li.style.display = li.textContent.toLowerCase().startsWith(filter)
       ? "block"
       : "none";
   });
 
   $("comboList").classList.remove("hidden");
-
-  //nameSelected();
 }
 
+/***********************************************************
+ * startNewMemberMode
+ * called from somewhere
+ ***********************************************************/
+export function startNewMemberMode() {
+  //alert("Starting a new person.");
+  //newMemberMode = true;  //don't set this to true here. It gets set in onComboInput.
+  isEmpty = true;
+  $("nameInput").value = "New";
+  onComboInput();
+}
+
+/*************************************************************
+ * nameSelected
+ *  Called from selectComboItem() and from an onclick
+ ************************************************************/
 export function nameSelected() {
   const name = $("nameInput").value.trim();
   if (!name) return;
@@ -180,8 +331,14 @@ export function nameSelected() {
 
   clearDirty();
   clearCropper();
-
+  clearPreviewDisplay();
+  //alert("just called clearPreviewDisplay");
   if (currentMember) {
+    newMemberMode = false;
+      $("renameBtn").disabled = false;
+      $("newNameBtn").disabled = false;
+      $("deletePersonBtn").disabled = false;
+
     currentAnecdoteIndex = 0;
     loadAnecdote();
 
@@ -212,9 +369,49 @@ export function nameSelected() {
     updateAnecdoteLabels();
   }
 }
+/******************************************************************
+ * clearPreviewDisplay
+ * Called from onComboInput, nameSelected, deleteCurrentPerson
+ ******************************************************************/
+function clearPreviewDisplay() {
+  const previewCanvas = $("previewCanvas");
+  if (previewCanvas) {
+    const ctxPrev = previewCanvas.getContext("2d");
+    ctxPrev.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    //alert("cleared preview with clearPreviewDisplay");
+    previewHasImage = false;
+    //setDefaultPreview();
+  }
+}
+
+/*****************************************************************
+ * setDefaultPreview
+ * Called from onComboInput only to show a default image
+ * 
+ *****************************************************************/
+function setDefaultPreview() {
+  const url = "src/images/defaultimage.jpg";
+  const previewCanvas = $("previewCanvas");
+  if (!previewCanvas) return;
+  const ctx = previewCanvas.getContext('2d');
+  const img = new Image();
+  img.onload = () => {
+      // Clear previous content
+      ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      // Draw scaled to fit 200×200
+      ctx.drawImage(img, 0, 0, previewCanvas.width, previewCanvas.height);
+      previewHasImage = true;
+      //alert("drew preview in setDefaultPreview");
+  };
+  img.src = url;
+}
 
 /* ANECDOTES */
 
+/******************************************************************
+ * showCachedPhoto
+ * Called from nameSelected and uploadPhotoForMember (storage.js)
+ ******************************************************************/
 export function showCachedPhoto(member) {
   if (!member || !member.photo) return;
 
@@ -227,8 +424,16 @@ export function showCachedPhoto(member) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  previewHasImage = true;
+  //alert("drew preview with showCachedPhoto");
 }
 
+/******************************************************************
+ * emptyAnecdote 
+ * Called from loadAnecdote, saveCurrentAnecdote, 
+ * addNewAnecdote, delCurrentAnecdote
+ ******************************************************************/
 function emptyAnecdote() {
   return {
     id: "anecdote-" + Date.now(),
@@ -239,6 +444,11 @@ function emptyAnecdote() {
   };
 }
 
+/******************************************************************
+ * loadAnecdote
+ * Called from nameSelected, addNewAnecdote, deleteCurrentAnecdote, 
+ * prevAnecdote, nextAnecdote
+ ******************************************************************/
 function loadAnecdote() {
   clearDirty();
 
@@ -285,9 +495,14 @@ function loadAnecdote() {
   } else {
     answersSection.style.display = "block";
   }
-
+  validateRequiredFields();
 }
 
+/*************************************************************
+ * updateAnecdoteLabels
+ * Called from onComboInput, nameSelected, loadAnecdote,
+ * and clearAllFields
+ *************************************************************/
 function updateAnecdoteLabels() {
   const title = $("anecdoteTitle");
   const countLabel = $("anecdoteCountLabel");
@@ -304,6 +519,11 @@ function updateAnecdoteLabels() {
   countLabel.textContent = `(${index} of ${total})`;
 }
 
+/*************************************************************
+ * clearAnecdoteFields
+ * Called from onComboInput, nameSelected, loadAnecdote,
+ * and clearAllFields
+ *************************************************************/
 function clearAnecdoteFields() {
   $("storyBox").value = "";
   $("questionBox").value = "";
@@ -312,8 +532,13 @@ function clearAnecdoteFields() {
   $("ans2").value = "";
   $("ans3").value = "";
   document.querySelector(`input[name="correct"][value="0"]`).checked = true;
+  validateRequiredFields();
 }
 
+/*************************************************************
+ * clearAllFields
+ * Called from initEditor, createNewJson, deleteCurrentPerson
+ *************************************************************/
 function clearAllFields() {
   $("nameInput").value = "";
   clearAnecdoteFields();
@@ -323,8 +548,14 @@ function clearAllFields() {
 
 /* DIRTY STATE */
 
+/*************************************************************
+ * markDirty, clearDirty, isDirty
+ * These three functions keep track of changes in the fields
+ * by updating the Save button
+ *************************************************************/
 export function markDirty() {
   $("saveAnecdoteBtn").classList.add("save-dirty");
+  validateRequiredFields();
 }
 
 export function clearDirty() {
@@ -337,15 +568,35 @@ export function isDirty() {
 
 /* SAVE / ADD / DELETE */
 
+/************************************************************
+ * deleteCurrentPerson
+ * Called from the event listener connected to the
+ * delete person button in main.js.
+ ************************************************************/
 export async function deleteCurrentPerson() {
   if (!currentMember) {
-    alert("No person selected to delete.");
+    //alert("No person selected to delete.");
+    showModal({
+      title: "Note",
+      message: "No person selected to delete.",
+      okOnly: true
+    });
+
     return;
   }
 
-  if (!confirm(`Delete ${currentMember.name} and all their anecdotes, including their photo?`)) {
+  /*if (!confirm(`Delete ${currentMember.name} and all their anecdotes, including their photo?`)) {
     return;
-  }
+  }*/
+  const { button } = await showModal({
+    title: "Delete Person",
+    message: `Delete ${currentMember.name} and all their anecdotes, including their photo?`,
+    buttons: [
+      { label: "Delete", value: "delete", class: "danger" },
+      { label: "Cancel", value: "cancel" }
+    ]
+  });
+  if (button !== "delete") return;
 
   // 1. Remove from jsonData.family
   const memberToDelete = currentMember;
@@ -378,6 +629,7 @@ export async function deleteCurrentPerson() {
   currentAnecdoteIndex = 0;
   clearAllFields();
   clearCropper();
+  clearPreviewDisplay();
 
   // 4. Refresh the name list
   populateNameList();
@@ -388,6 +640,39 @@ export async function deleteCurrentPerson() {
   alert("Person deleted.");
 }
 
+/*************************************************************
+* validateRequiredFields
+* Called from loadAnecdote, clearAnecdoteFields, markDirty
+* need to check the name, and preview isn't verifying on new member
+*************************************************************/
+function validateRequiredFields() {
+  const fields = [
+      document.getElementById("nameInput"),
+      document.getElementById("storyBox"),
+      document.getElementById("questionBox"),
+      document.getElementById("ans0"),
+      document.getElementById("ans1"),
+      document.getElementById("ans2"),
+      document.getElementById("ans3")
+  ];
+  isEmpty = false;
+  fields.forEach(field => {
+      if (!field.value.trim()) {
+          field.classList.add("input-empty");
+          isEmpty = true;
+      } else {
+          field.classList.remove("input-empty");
+      }
+  });
+  $("saveAnecdoteBtn").disabled = isEmpty ? true : false;
+  $("addAnecdoteBtn").disabled = isEmpty ? true : false;
+}
+
+/*************************************************************
+* saveCurrentAnecdote
+* Called from addNewAnecdote and commitRename
+* and by clicking saveAnecdoteBtn
+*************************************************************/
 export async function saveCurrentAnecdote() {
   const name = $("nameInput").value.trim();
   if (!name) {
@@ -405,6 +690,11 @@ export async function saveCurrentAnecdote() {
   }
 
   // 3. If no member exists, create one — but DO NOT replace currentMember
+  newMemberMode = false;
+  $("renameBtn").disabled = false;
+  $("newNameBtn").disabled = false;
+  $("deletePersonBtn").disabled = false;
+
   if (!member) {
     member = {
       id: Date.now().toString(),
@@ -504,6 +794,10 @@ export async function saveCurrentAnecdote() {
   await saveJsonToSupabase(jsonData);
 }
 
+/*************************************************************
+* addNewAnecdote
+* Called only from clicking the button
+*************************************************************/
 export function addNewAnecdote() {
   if (isDirty()) {
     saveCurrentAnecdote();
@@ -534,6 +828,10 @@ export function addNewAnecdote() {
   loadAnecdote();
 }
 
+/*************************************************************
+* deleteCurretnAnecdote
+* Called only from clicking the button
+*************************************************************/
 export function deleteCurrentAnecdote() {
   if (!currentMember || !currentMember.anecdotes || currentMember.anecdotes.length === 0) {
     alert("No anecdote to delete.");
@@ -554,6 +852,10 @@ export function deleteCurrentAnecdote() {
   loadAnecdote();
 }
 
+/*************************************************************
+* prevAnecdote
+* Called only from clicking the button
+*************************************************************/
 export function prevAnecdote() {
   if (!currentMember || !currentMember.anecdotes) return;
   if (currentMember.anecdotes.length === 0) return;
@@ -563,6 +865,10 @@ export function prevAnecdote() {
   }
 }
 
+/*************************************************************
+* nextAnecdote
+* Called only from clicking the button
+*************************************************************/
 export function nextAnecdote() {
   if (!currentMember || !currentMember.anecdotes) return;
   if (currentMember.anecdotes.length === 0) return;
@@ -572,44 +878,37 @@ export function nextAnecdote() {
   }
 }
 
-export function openRenameModal() {
+/*************************************************************
+* openRenameModal
+* Called only from clicking the button
+*************************************************************/
+export async function openRenameModal() {
   if (!currentMember) return;
 
-  const modal = $("renameModal");
-  const input = $("renameInput");
-
-  input.value = currentMember.name;
-  modal.style.display = "block";
-
-  input.focus();
-  input.select();
-
-  // Add key listener
-  document.addEventListener("keydown", handleRenameKeys);
-}
-
-export function closeRenameModal() {
-  $("renameModal").style.display = "none";
-
-  // Remove key listener
-  document.removeEventListener("keydown", handleRenameKeys);
-}
-
-function handleRenameKeys(e) {
-  if (e.key === "Enter") {
-    commitRename();
-  } else if (e.key === "Escape") {
-    closeRenameModal();
+  try {
+    const result = await showModal({
+      title: "Rename Person",
+      message: "Enter a new name:",
+      input: { defaultValue: currentMember.name }
+    });
+    if (result.button !== "cancel") {
+      commitRename(result.input);
+    }
+  } catch {
+    // user pressed Cancel or Escape
   }
 }
 
-export function commitRename() {
-  const newName = $("renameInput").value.trim();
+/*************************************************************
+* commitRename
+* Called only from openRenameModal
+*************************************************************/
+export function commitRename(newName) {
   const oldName = currentMember.name;
-
+  newName = newName.trim();
+  // Validate
   if (!newName || newName === oldName) {
-    closeRenameModal();
-    return;
+    return; // modal already closed by caller
   }
 
   // 1. Update JSON
@@ -630,9 +929,4 @@ export function commitRename() {
   // 5. Mark JSON as dirty so Save JSON File will persist it
   markDirty();
   saveCurrentAnecdote();
-  // 6. Close the modal
-  closeRenameModal();
 }
-
-
-

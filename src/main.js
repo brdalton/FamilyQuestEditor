@@ -13,8 +13,7 @@ import {
   nextAnecdote,
   markDirty,
   openRenameModal,
-  commitRename,
-  closeRenameModal
+  startNewMemberMode
 } from './editor/editor.js';
 
 import { initCropper, saveCroppedPhoto } from './editor/cropper.js';
@@ -59,7 +58,7 @@ document.getElementById("nameInput")
 document.getElementById("comboArrowButton")
   .addEventListener("click", toggleComboList);
 
-document.addEventListener("click", (e) => {
+document.addEventListener("click", (e) => {  //close the list if we clicked outside it
   const list = document.getElementById("comboList");
   const box = document.querySelector(".combo-box");
   const arrow = document.getElementById("comboArrowButton");
@@ -74,6 +73,14 @@ document.addEventListener("click", (e) => {
   list.classList.add("hidden");
 });
 
+document.getElementById("renameBtn")  
+  .addEventListener("click", openRenameModal);
+
+document.getElementById("newNameBtn")  
+  .addEventListener("click", startNewMemberMode);
+
+/*document.getElementById("newNameBtn")  
+  .addEventListener("click", () => startNewMemberMode("New"));  */
 
 // ANECDOTE NAV
 document.getElementById("prevAnecdoteBtn")
@@ -98,6 +105,7 @@ document.getElementById("deletePersonBtn")
   .addEventListener("click", deleteCurrentPerson);
 
 // DIRTY MARKING
+document.getElementById("nameInput").addEventListener("input", markDirty);
 document.getElementById("storyBox").addEventListener("input", markDirty);
 document.getElementById("questionBox").addEventListener("input", markDirty);
 document.getElementById("ans0").addEventListener("input", markDirty);
@@ -109,12 +117,4 @@ document.querySelectorAll('input[name="correct"]').forEach(radio => {
   radio.addEventListener("click", markDirty);
 });
 
-// RENAME MODAL
-document.getElementById("renameBtn")
-  .addEventListener("click", openRenameModal);
 
-document.getElementById("renameOkBtn")
-  .addEventListener("click", commitRename);
-
-document.getElementById("renameCancelBtn")
-  .addEventListener("click", closeRenameModal);
