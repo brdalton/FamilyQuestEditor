@@ -13,7 +13,7 @@ export async function login() {
     email,
     options: {
       //emailRedirectTo: 'http://127.0.0.1:5500/index.html'
-	  emailRedirectTo: 'https://brdalton.github.io/'
+	  emailRedirectTo: 'https://brdalton.github.io/FamilyQuestEditor/index.html'
     }
   });
 
