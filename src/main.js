@@ -29,6 +29,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // ⭐ NEW — LOGIN‑AWARE STARTUP
 async function initApp() {
+  await supabase.auth.exchangeCodeForSession(window.location.href);
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {
