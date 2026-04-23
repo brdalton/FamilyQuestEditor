@@ -12,8 +12,8 @@ export async function login() {
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: 'http://127.0.0.1:5500/index.html'
-	    //emailRedirectTo: 'https://brdalton.github.io/FamilyQuestEditor/index.html'
+      //emailRedirectTo: 'http://127.0.0.1:5500/index.html'
+	    emailRedirectTo: 'https://brdalton.github.io/FamilyQuestEditor/index.html'
     }
   });
 
