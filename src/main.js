@@ -9,11 +9,11 @@ import {
   toggleComboList,
   nameSelected,
   deleteCurrentPerson,
-  saveCurrentAnecdote,
-  addNewAnecdote,
-  deleteCurrentAnecdote,
-  prevAnecdote,
-  nextAnecdote,
+  saveCurrentCard,
+  addNewCard,
+  deleteCurrentCard,
+  prevCard,
+  nextCard,
   markDirty,
   openRenameModal,
   startNewMemberMode
@@ -22,51 +22,11 @@ import {
 import { initCropper, saveCroppedPhoto } from './editor/cropper.js';
 import { initAuthUI, login, logout, supabase } from './shared/supabaseClient.js';
 
-// ⭐ NEW — MAIN ENTRY POINT
 window.addEventListener("DOMContentLoaded", () => {
-  initApp();
-});
-
-// ⭐ NEW — LOGIN‑AWARE STARTUP
-async function initApp() {
-  const { data: { session } } = await supabase.auth.getSession();
-
-  if (!session) {
-    showLoggedOutScreen();
-    return;
-  }
-
-  // Logged in → show editor UI
-  document.getElementById("editorApp").style.display = "block";
-
-  // Your original startup sequence
-  initAuthUI();
-  initEditor();
   initCropper();
-}
-
-// ⭐ NEW — LOGGED‑OUT SCREEN
-function showLoggedOutScreen() {
-  document.body.innerHTML = `
-    <div id="loggedOutScreen" class="logged-out-container">
-      <h1>Family Editor</h1>
-      <p>You must be logged in to view or edit your family data.</p>
-      <button id="loginButton">Log In</button>
-    </div>
-  `;
-
-  document.getElementById("loginButton").addEventListener("click", async () => {
-    const email = prompt("Enter your email address:");
-    if (!email) return;
-
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (error) {
-      alert("Error sending magic link: " + error.message);
-    } else {
-      alert("Magic link sent! Check your email.");
-    }
-  });
-}
+  initEditor();
+  initAuthUI();
+});
 
 // PHOTO
 $("savePhotoBtn")
@@ -132,23 +92,23 @@ $("newNameBtn")
   .addEventListener("click", () => startNewMemberMode("New"));  */
 
 // ANECDOTE NAV
-$("prevAnecdoteBtn")
-  .addEventListener("click", prevAnecdote);
+$("prevCardBtn")
+  .addEventListener("click", prevCard);
 
-$("nextAnecdoteBtn")
-  .addEventListener("click", nextAnecdote);
+$("nextCardBtn")
+  .addEventListener("click", nextCard);
 
 // ANECDOTE SAVE / ADD / DELETE
-$("saveAnecdoteBtn")
+$("saveCardBtn")
   .addEventListener("click", async () => {
-    await saveCurrentAnecdote();
+    await saveCurrentCard();
   });
 
-$("addAnecdoteBtn")
-  .addEventListener("click", addNewAnecdote);
+$("addCardBtn")
+  .addEventListener("click", addNewCard);
 
-$("deleteAnecdoteBtn")
-  .addEventListener("click", deleteCurrentAnecdote);
+$("deleteCardBtn")
+  .addEventListener("click", deleteCurrentCard);
 
 $("deletePersonBtn")
   .addEventListener("click", deleteCurrentPerson);

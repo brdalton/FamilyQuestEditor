@@ -8,14 +8,15 @@
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   margin: 0;
-  background: var(--bg);
+  background: #e2e8f0; /* var(--bg); */
   color: #2d3748;
 }
 
-.container {
+.container {             /* the . means this selector is a class */
   max-width: 1100px;
-  margin: 0 auto;
-  padding: 5px 24px 5px;
+  margin: 0 auto;         /* center the big container - a value instead of 0 sets horizontal distance from left side*/
+  padding: 5px 24px 5px;  /* padding is inside the outer edges */
+  background:#e2e8f0;
 }
 
 header {
@@ -47,7 +48,7 @@ header button:hover {
   font-size: 13px;
 }
 
-#userEmail {
+#userEmail {          /* the # means this selector is an ID */
   color: #4a5568;
 }
 
@@ -68,7 +69,7 @@ header button:hover {
 }
 
 .card {
-  background: white;
+  background: rgb(250, 253, 255);
   border-radius: 8px;
   border: 1px solid var(--border);
   padding: 10px 18px 5px;   /* top, left-right, bottom */
@@ -352,7 +353,7 @@ button:disabled {
   border-color: #2b6cb0 !important;
 }
 
-/* Anecdotes */
+/* Cards */
 
 .two-column {
   display: flex;

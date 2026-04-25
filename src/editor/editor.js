@@ -10,12 +10,13 @@ import { showModal } from "./modal.js";
 
 export let jsonData = { family: [] };
 export let currentMember = null;
-export let currentAnecdoteIndex = 0;
+export let currentCardIndex = 0;  //zero based number of the current card
 export const editorImageCache = {};
 let newMemberMode = false;
 let newMemberName = "new";
 let previewHasImage = false;
 let isEmpty = false;  //true if question, story, or any answer is empty
+//I might want to know if everything is empty, in which case we could exit with a clear conscience
 let isWildcard = false;
 let isFollies = false;
  
@@ -128,7 +129,7 @@ export async function createNewJson() {
 
   jsonData = createDefaultJson();
   currentMember = null;
-  currentAnecdoteIndex = 0;
+  currentCardIndex = 0;
   await saveJsonToSupabase(jsonData);
   populateNameList();
   clearAllFields();
@@ -149,7 +150,7 @@ export async function saveJson() {
 /***********************************************************************
  * populateNameList
  * This is called from initEditor, deleteCurrentPerson, 
- * saveCurrentAnecdote, addNewAnecdote, and commitRename
+ * saveCurrentCard, addNewCard, and commitRename
  ***********************************************************************/
 export function populateNameList() {
   const list = $("comboList");
@@ -288,16 +289,16 @@ export async function onComboInput() {
   const input = $("nameInput").value;
   newMemberName = input;
   /**************************************************************************************
-   * in fact, maybe in newMemberMode we get rid of Add New Anecdote, 
-   * Delete Anecdote, and Delete Person.
+   * in fact, maybe in newMemberMode we get rid of Add New Card, 
+   * Delete Card, and Delete Person.
    **************************************************************************************/
   if (!newMemberMode) {  //Skip all this if I'm already in newMemberMode
     if (!currentMember || (currentMember && input !== currentMember.name)) { 
       newMemberMode = true;
       hideAnswerSection(input);  //show or hide the answer section
       currentMember = null;
-      clearAnecdoteFields();
-      updateAnecdoteLabels();
+      clearCardFields();
+      updateCardLabels();
       clearCropper();
       clearPreviewDisplay();
       setDefaultPreview();
@@ -378,16 +379,16 @@ export function nameSelected() {
   //alert("just called clearPreviewDisplay");
   if (currentMember) {
     newMemberMode = false;
-      $("renameBtn").disabled = false;
-      $("newNameBtn").disabled = false;
-      $("deletePersonBtn").disabled = false;
+    $("renameBtn").disabled = false;
+    $("newNameBtn").disabled = false;
+    $("deletePersonBtn").disabled = false;
 
-    currentAnecdoteIndex = 0;
-    loadAnecdote();
+    currentCardIndex = 0;
+    loadCard();
 
     hideAnswerSection(currentMember.name);
 
-   if (editorImageCache[currentMember.photo]) {
+    if (editorImageCache[currentMember.photo]) {
       showCachedPhoto(currentMember);
     } else {
       loadPhotoIntoCache(currentMember).then(() => {
@@ -396,8 +397,8 @@ export function nameSelected() {
     }
 
   } else {
-    clearAnecdoteFields();
-    updateAnecdoteLabels();
+    clearCardFields();
+    updateCardLabels();
   }
 }
 /******************************************************************
@@ -437,7 +438,7 @@ function setDefaultPreview() {
   img.src = url;
 }
 
-/* ANECDOTES */
+/* CARDS */
 
 /******************************************************************
  * showCachedPhoto
@@ -461,13 +462,13 @@ export function showCachedPhoto(member) {
 }
 
 /******************************************************************
- * emptyAnecdote 
- * Called from loadAnecdote, saveCurrentAnecdote, 
- * addNewAnecdote, delCurrentAnecdote
+ * emptyCard 
+ * Called from loadCard, saveCurrentCard, 
+ * addNewCard, delCurrentCard
  ******************************************************************/
-function emptyAnecdote() {
+function emptyCard() {
   return {
-    id: "anecdote-" + Date.now(),
+    id: "card-" + Date.now(),
     story: "",
     question: "",
     answers: ["", "", "", ""],
@@ -476,31 +477,31 @@ function emptyAnecdote() {
 }
 
 /******************************************************************
- * loadAnecdote
- * Called from nameSelected, addNewAnecdote, deleteCurrentAnecdote, 
- * prevAnecdote, nextAnecdote
+ * loadCard
+ * Called from nameSelected, addNewCard, deleteCurrentCard, 
+ * prevCard, nextCard
  ******************************************************************/
-function loadAnecdote() {
+function loadCard() {
   clearDirty();
 
   if (!currentMember) {
-    clearAnecdoteFields();
-    updateAnecdoteLabels();
+    clearCardFields();
+    updateCardLabels();
     return;
   }
 
-  const anecdotes = currentMember.anecdotes || [];
-  if (anecdotes.length === 0) {
-    currentMember.anecdotes = [emptyAnecdote()];
-    currentAnecdoteIndex = 0;
+  const cards = currentMember.cards || [];
+  if (cards.length === 0) {
+    currentMember.cards = [emptyCard()];
+    currentCardIndex = 0;
   }
 
-  if (currentAnecdoteIndex < 0) currentAnecdoteIndex = 0;
-  if (currentAnecdoteIndex >= currentMember.anecdotes.length) {
-    currentAnecdoteIndex = currentMember.anecdotes.length - 1;
+  if (currentCardIndex < 0) currentCardIndex = 0;
+  if (currentCardIndex >= currentMember.cards.length) {
+    currentCardIndex = currentMember.cards.length - 1;
   }
 
-  const a = currentMember.anecdotes[currentAnecdoteIndex];
+  const a = currentMember.cards[currentCardIndex];
 
   $("storyBox").value = a.story || "";
   $("questionBox").value = a.question || "";
@@ -513,7 +514,7 @@ function loadAnecdote() {
   const radio = document.querySelector(`input[name="correct"][value="${correctValue}"]`);
   if (radio) radio.checked = true;
 
-  updateAnecdoteLabels();
+  updateCardLabels();
 
   hideAnswerSection(currentMember.name);  //hide or show the answer section
 
@@ -548,32 +549,33 @@ function hideAnswerSection(mem) {
 }
 
 /*************************************************************
- * updateAnecdoteLabels
- * Called from onComboInput, nameSelected, loadAnecdote,
+ * updateCardLabels
+ * Called from onComboInput, nameSelected, loadCard,
  * and clearAllFields
+ * update the numbers showing which card we're on: Card 1, (1 of 3)
  *************************************************************/
-function updateAnecdoteLabels() {
-  const title = $("anecdoteTitle");
-  const countLabel = $("anecdoteCountLabel");
+function updateCardLabels() {
+  const title = $("cardTitle");
+  const countLabel = $("cardCountLabel");
 
-  if (!currentMember || !currentMember.anecdotes || currentMember.anecdotes.length === 0) {
-    title.textContent = "Anecdote 1:";
+  if (!currentMember || !currentMember.cards || currentMember.cards.length === 0) {
+    title.textContent = "Card 1:";
     countLabel.textContent = "(0 of 0)";
     return;
   }
 
-  const index = currentAnecdoteIndex + 1;
-  const total = currentMember.anecdotes.length;
-  title.textContent = `Anecdote ${index}:`;
+  const index = currentCardIndex + 1;  //currentCardIndex is 0 based
+  const total = currentMember.cards.length;
+  title.textContent = `Card ${index}:`;
   countLabel.textContent = `(${index} of ${total})`;
 }
 
 /*************************************************************
- * clearAnecdoteFields
- * Called from onComboInput, nameSelected, loadAnecdote,
+ * clearCardFields
+ * Called from onComboInput, nameSelected, loadCard,
  * and clearAllFields
  *************************************************************/
-function clearAnecdoteFields() {
+function clearCardFields() {
   $("storyBox").value = "";
   $("questionBox").value = "";
   $("ans0").value = "";
@@ -590,8 +592,8 @@ function clearAnecdoteFields() {
  *************************************************************/
 function clearAllFields() {
   $("nameInput").value = "";
-  clearAnecdoteFields();
-  updateAnecdoteLabels();
+  clearCardFields();
+  updateCardLabels();
   clearDirty();
 }
 
@@ -603,17 +605,17 @@ function clearAllFields() {
  * by updating the Save button
  *************************************************************/
 export function markDirty() {
-  $("saveAnecdoteBtn").classList.add("save-dirty");
+  $("saveCardBtn").classList.add("save-dirty");
   //alert("Marking Dirty");
   validateRequiredFields();
 }
 
 export function clearDirty() {
-  $("saveAnecdoteBtn").classList.remove("save-dirty");
+  $("saveCardBtn").classList.remove("save-dirty");
 }
 
 export function isDirty() {
-  return $("saveAnecdoteBtn").classList.contains("save-dirty");
+  return $("saveCardBtn").classList.contains("save-dirty");
 }
 
 /* SAVE / ADD / DELETE */
@@ -635,12 +637,12 @@ export async function deleteCurrentPerson() {
     return;
   }
 
-  /*if (!confirm(`Delete ${currentMember.name} and all their anecdotes, including their photo?`)) {
+  /*if (!confirm(`Delete ${currentMember.name} and all their cards, including their photo?`)) {
     return;
   }*/
   const { button } = await showModal({
     title: "Delete Person",
-    message: `Delete ${currentMember.name} and all their anecdotes, including their photo?`,
+    message: `Delete ${currentMember.name} and all their cards, including their photo?`,
     buttons: [
       { label: "Delete", value: "delete", class: "danger" },
       { label: "Cancel", value: "cancel" }
@@ -676,7 +678,7 @@ export async function deleteCurrentPerson() {
   
   // 3. Clear UI state
   currentMember = null;
-  currentAnecdoteIndex = 0;
+  currentCardIndex = 0;
   clearAllFields();
   clearCropper();
   clearPreviewDisplay();
@@ -692,7 +694,7 @@ export async function deleteCurrentPerson() {
 
 /*************************************************************
 * validateRequiredFields
-* Called from loadAnecdote, clearAnecdoteFields, markDirty
+* Called from loadCard, clearCardFields, markDirty
 * need to check the name, and preview isn't verifying on new member
 *************************************************************/
 function validateRequiredFields() {
@@ -714,21 +716,21 @@ function validateRequiredFields() {
   fields.forEach(field => {
       if (!field.value.trim()) {
           field.classList.add("input-empty");
-          isEmpty = true;  //I can add one to get a count of how many fields are empty
+          isEmpty = true;  //would it be useful to add one to get a count of how many fields are empty?
       } else {
           field.classList.remove("input-empty");
       }
   });
-  $("saveAnecdoteBtn").disabled = isEmpty ? true : false;
-  $("addAnecdoteBtn").disabled = isEmpty ? true : false;
+  $("saveCardBtn").disabled = isEmpty ? true : false;
+  $("addCardBtn").disabled = isEmpty ? true : false;
 }
 
 /*************************************************************
-* saveCurrentAnecdote
-* Called from addNewAnecdote and commitRename
-* and by clicking saveAnecdoteBtn
+* saveCurrentCard
+* Called from addNewCard and commitRename
+* and by clicking saveCardBtn
 *************************************************************/
-export async function saveCurrentAnecdote() {
+export async function saveCurrentCard() {
   const name = $("nameInput").value.trim();
   if (!name) {
     alert("Name cannot be empty.");
@@ -756,7 +758,7 @@ export async function saveCurrentAnecdote() {
       name,
       photo: "",
       photoBlob: null,     // ← CRITICAL: ensures cropper writes to correct object
-      anecdotes: []
+      cards: []
     };
     jsonData.family.push(member);
     populateNameList();
@@ -769,7 +771,7 @@ export async function saveCurrentAnecdote() {
     Object.assign(currentMember, member);
   }
 
-  // 5. Update anecdote fields
+  // 5. Update card fields
   const story = $("storyBox").value.trim();
   const question = $("questionBox").value.trim();
   const answers = [
@@ -802,15 +804,15 @@ export async function saveCurrentAnecdote() {
     }
   }
 
-  if (!currentMember.anecdotes) currentMember.anecdotes = [];
+  if (!currentMember.cards) currentMember.cards = [];
 
-  if (currentAnecdoteIndex < 0 || currentAnecdoteIndex >= currentMember.anecdotes.length) {
-    currentAnecdoteIndex = currentMember.anecdotes.length;
-    currentMember.anecdotes.push(emptyAnecdote());
+  if (currentCardIndex < 0 || currentCardIndex >= currentMember.cards.length) {
+    currentCardIndex = currentMember.cards.length;
+    currentMember.cards.push(emptyCard());
   }
 
-  currentMember.anecdotes[currentAnecdoteIndex] = {
-    id: currentMember.anecdotes[currentAnecdoteIndex]?.id || ("anecdote-" + Date.now()),
+  currentMember.cards[currentCardIndex] = {
+    id: currentMember.cards[currentCardIndex]?.id || ("card-" + Date.now()),
     story,
     question,
     answers,
@@ -818,8 +820,8 @@ export async function saveCurrentAnecdote() {
   };
   clearCropper();
   clearDirty();
-  updateAnecdoteLabels();
-  alert("Anecdote saved!");
+  updateCardLabels();
+  alert("Card saved!");
 
   // 6. Always capture the preview image on Save
   const blob = await capturePreviewAsBlob();
@@ -850,17 +852,17 @@ export async function saveCurrentAnecdote() {
 }
 
 /*************************************************************
-* addNewAnecdote
+* addNewCard
 * Called only from clicking the button
 *************************************************************/
-export function addNewAnecdote() {
+export function addNewCard() {
   if (isDirty()) {
-    saveCurrentAnecdote();
+    saveCurrentCard();
   }
   if (!currentMember) {
     const name = $("nameInput").value.trim();
     if (!name) {
-      alert("Enter a name first before adding an anecdote.");
+      alert("Enter a name first before adding a card.");
       return;
     }
     let member = jsonData.family.find(m => m.name === name);
@@ -869,7 +871,7 @@ export function addNewAnecdote() {
         id: Date.now().toString(),
         name,
         photo: "",
-        anecdotes: []
+        cards: []
       };
       jsonData.family.push(member);
       populateNameList();
@@ -877,59 +879,59 @@ export function addNewAnecdote() {
     currentMember = member;
   }
 
-  currentMember.anecdotes = currentMember.anecdotes || [];
-  currentMember.anecdotes.push(emptyAnecdote());
-  currentAnecdoteIndex = currentMember.anecdotes.length - 1;
-  loadAnecdote();
+  currentMember.cards = currentMember.cards || [];
+  currentMember.cards.push(emptyCard());
+  currentCardIndex = currentMember.cards.length - 1;
+  loadCard();
 }
 
 /*************************************************************
-* deleteCurretnAnecdote
+* deleteCurretnCard
 * Called only from clicking the button
 *************************************************************/
-export function deleteCurrentAnecdote() {
-  if (!currentMember || !currentMember.anecdotes || currentMember.anecdotes.length === 0) {
-    alert("No anecdote to delete.");
+export function deleteCurrentCard() {
+  if (!currentMember || !currentMember.cards || currentMember.cards.length === 0) {
+    alert("No card to delete.");
     return;
   }
 
-  if (!confirm("Delete this anecdote?")) return;
+  if (!confirm("Delete this card?")) return;
 
-  currentMember.anecdotes.splice(currentAnecdoteIndex, 1);
+  currentMember.cards.splice(currentCardIndex, 1);
 
-  if (currentMember.anecdotes.length === 0) {
-    currentMember.anecdotes.push(emptyAnecdote());
-    currentAnecdoteIndex = 0;
-  } else if (currentAnecdoteIndex >= currentMember.anecdotes.length) {
-    currentAnecdoteIndex = currentMember.anecdotes.length - 1;
+  if (currentMember.cards.length === 0) {
+    currentMember.cards.push(emptyCard());
+    currentCardIndex = 0;
+  } else if (currentCardIndex >= currentMember.cards.length) {
+    currentCardIndex = currentMember.cards.length - 1;
   }
 
-  loadAnecdote();
+  loadCard();
 }
 
 /*************************************************************
-* prevAnecdote
+* prevCard
 * Called only from clicking the button
 *************************************************************/
-export function prevAnecdote() {
-  if (!currentMember || !currentMember.anecdotes) return;
-  if (currentMember.anecdotes.length === 0) return;
-  if (currentAnecdoteIndex > 0) {
-    currentAnecdoteIndex--;
-    loadAnecdote();
+export function prevCard() {
+  if (!currentMember || !currentMember.cards) return;
+  if (currentMember.cards.length === 0) return;
+  if (currentCardIndex > 0) {
+    currentCardIndex--;
+    loadCard();
   }
 }
 
 /*************************************************************
-* nextAnecdote
+* nextCard
 * Called only from clicking the button
 *************************************************************/
-export function nextAnecdote() {
-  if (!currentMember || !currentMember.anecdotes) return;
-  if (currentMember.anecdotes.length === 0) return;
-  if (currentAnecdoteIndex < currentMember.anecdotes.length - 1) {
-    currentAnecdoteIndex++;
-    loadAnecdote();
+export function nextCard() {
+  if (!currentMember || !currentMember.cards) return;
+  if (currentMember.cards.length === 0) return;
+  if (currentCardIndex < currentMember.cards.length - 1) {
+    currentCardIndex++;
+    loadCard();
   }
 }
 
@@ -983,5 +985,5 @@ export function commitRename(newName) {
 
   // 5. Mark JSON as dirty so Save JSON File will persist it
   markDirty();
-  saveCurrentAnecdote();
+  saveCurrentCard();
 }

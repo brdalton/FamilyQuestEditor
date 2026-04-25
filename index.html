@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Family Editor</title>
+  <title>Family Quest Editor</title>
   <link rel="stylesheet" href="editor.css">
   <link rel="stylesheet" href="modal.css">
 </head>
 <body>
-<div id="editorApp" style="display:none;">
+
   <div class="container">
 
     <header>
@@ -74,14 +74,14 @@
       </div>
     </div>
 
-    <!-- ANECDOTE CARD -->
+    <!-- LOWER CARD -->
     <div class="card">
       <div class="field-label">
-        <span id="anecdoteTitle">Anecdote 1:</span>
-        <div class="anecdote-nav">
-          <button id="prevAnecdoteBtn">&lt; Prev</button>
-          <button id="nextAnecdoteBtn">Next &gt;</button>
-          <span id="anecdoteCountLabel">(0 of 0)</span>
+        <span id="cardTitle">Card 1:</span>
+        <div class="card-nav">
+          <button id="prevCardBtn">&lt; Prev</button>
+          <button id="nextCardBtn">Next &gt;</button>
+          <span id="cardCountLabel">(0 of 0)</span>
         </div>
       </div>
 
@@ -122,10 +122,10 @@
 
       <div class="buttons-row">
         <div>
-          <button id="saveAnecdoteBtn" class="btn-ghost">Save</button>
-          <button id="addAnecdoteBtn" class="btn-ghost">Add New Anecdote</button>
+          <button id="saveCardBtn" class="btn-ghost">Save</button>
+          <button id="addCardBtn" class="btn-ghost">Add New Card</button>
         </div>
-        <button id="deleteAnecdoteBtn" class="btn-danger">Delete Anecdote</button>
+        <button id="deleteCardBtn" class="btn-danger">Delete Card</button>
         <button id="deletePersonBtn" class="btn-danger">Delete Person</button>
       </div>
     </div>
@@ -146,8 +146,7 @@
       </div>
     </div>
   </div>
-</div>  
 
-<script type="module" src="./src/main.js"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
